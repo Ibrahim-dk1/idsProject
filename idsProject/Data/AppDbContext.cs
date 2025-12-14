@@ -1,0 +1,139 @@
+﻿using Ids.Models;
+using Microsoft.EntityFrameworkCore;
+
+namespace Ids.Data
+{
+    public class AppDbContext : DbContext
+    {
+        public AppDbContext(DbContextOptions<AppDbContext> options)
+            : base(options)
+        {
+        }
+
+        public DbSet<Answer> Answers { get; set; }
+        public DbSet<Certificate> Certificates { get; set; }
+        public DbSet<Course> Courses { get; set; }
+        public DbSet<Lesson> Lessons { get; set; }
+        public DbSet<LessonCompletion> LessonCompletions { get; set; }
+        public DbSet<Question> Questions { get; set; }
+        public DbSet<Quiz> Quizzes { get; set; }
+        public DbSet<QuizAttempt> QuizAttempts { get; set; }
+        public DbSet<StudentAnswer> StudentAnswers { get; set; }
+        public DbSet<User> Users { get; set; }
+
+        protected override void OnModelCreating(ModelBuilder modelBuilder)
+        {
+            // User → Course
+            modelBuilder.Entity<Course>()
+                .HasOne(c => c.User)
+                .WithMany(u => u.Courses)
+                .HasForeignKey(c => c.CreatedBy)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            // User → Lesson
+            modelBuilder.Entity<Lesson>()
+                .HasOne(l => l.User)
+                .WithMany(u => u.Lessons)
+                .HasForeignKey(l => l.CreatedBy)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            // Course → Lesson
+            modelBuilder.Entity<Lesson>()
+                .HasOne(l => l.Course)
+                .WithMany(c => c.Lessons)
+                .HasForeignKey(l => l.CourseId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            // Certificate → Course
+            modelBuilder.Entity<Certificate>()
+                .HasOne(c => c.Course)
+                .WithMany(co => co.Certificates)
+                .HasForeignKey(c => c.CourseId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            // Certificate → User
+            modelBuilder.Entity<Certificate>()
+     .HasOne(c => c.User)
+     .WithMany(u => u.Certificates)
+     .HasForeignKey(c => c.UserId)
+     .OnDelete(DeleteBehavior.Restrict); // NOT Cascade
+
+            // Course → Quiz
+            modelBuilder.Entity<Quiz>()
+                .HasOne(q => q.Course)
+                .WithMany(c => c.Quizzes)
+                .HasForeignKey(q => q.CourseId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            // Lesson → Quiz (optional)
+            modelBuilder.Entity<Quiz>()
+                .HasOne(q => q.Lesson)
+                .WithMany(l => l.Quizzes)
+                .HasForeignKey(q => q.LessonId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            // Quiz → Question
+            modelBuilder.Entity<Question>()
+                .HasOne(q => q.Quiz)
+                .WithMany(qz => qz.Questions)
+                .HasForeignKey(q => q.QuizId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            // Question → Answer
+            modelBuilder.Entity<Answer>()
+                .HasOne(a => a.Question)
+                .WithMany(q => q.Answers)
+                .HasForeignKey(a => a.QuestionId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            // User → QuizAttempt
+            modelBuilder.Entity<QuizAttempt>()
+                .HasOne(qa => qa.User)
+                .WithMany(u => u.QuizAttempts)
+                .HasForeignKey(qa => qa.UserId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            // Quiz → QuizAttempt
+            modelBuilder.Entity<QuizAttempt>()
+                .HasOne(qa => qa.Quiz)
+                .WithMany(q => q.QuizAttempts)
+                .HasForeignKey(qa => qa.QuizId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            // QuizAttempt → StudentAnswer
+            modelBuilder.Entity<StudentAnswer>()
+                .HasOne(sa => sa.QuizAttempt)
+                .WithMany(qa => qa.StudentAnswers)
+                .HasForeignKey(sa => sa.QuizAttemptId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            // StudentAnswer → Question
+            modelBuilder.Entity<StudentAnswer>()
+                .HasOne(sa => sa.Question)
+                .WithMany(q => q.StudentAnswers)
+                .HasForeignKey(sa => sa.QuestionId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            // StudentAnswer → Answer (optional)
+            modelBuilder.Entity<StudentAnswer>()
+                .HasOne(sa => sa.SelectedAnswer)
+                .WithMany()
+                .HasForeignKey(sa => sa.SelectedAnswerId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            // User → LessonCompletion
+            modelBuilder.Entity<LessonCompletion>()
+                .HasOne(lc => lc.User)
+                .WithMany(u => u.LessonCompletions)
+                .HasForeignKey(lc => lc.UserId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            // Lesson → LessonCompletion
+            modelBuilder.Entity<LessonCompletion>()
+                .HasOne(lc => lc.Lesson)
+                .WithMany(l => l.LessonCompletions)
+                .HasForeignKey(lc => lc.LessonId)
+                .OnDelete(DeleteBehavior.Restrict);
+        }
+    }
+}
