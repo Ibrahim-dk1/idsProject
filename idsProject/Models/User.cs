@@ -11,7 +11,7 @@
         public string Password { get; set; } = null!;
         public string Role { get; set; } = null!;
         public DateTime CreatedAt { get; set; } = DateTime.Now;
-
+        
         public ICollection<Course> Courses { get; set; } = new List<Course>();
         public ICollection<Lesson> Lessons { get; set; } = new List<Lesson>();
         public ICollection<QuizAttempt> QuizAttempts { get; set; } = new List<QuizAttempt>();
