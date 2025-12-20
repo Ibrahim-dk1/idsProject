@@ -65,6 +65,18 @@ namespace idsProject.Controllers
         [HttpPost]
         public async Task<ActionResult> Create(CreateQuizDto dto)
         {
+            var courseExists = await _context.Courses.AnyAsync(c => c.Id == dto.CourseId);
+            var lessonExists = await _context.Lessons.AnyAsync(l => l.Id == dto.LessonId);
+
+            if (!courseExists)
+            {
+                return BadRequest(new
+                {
+                    message = "Invalid CourseId or LessonId provided.",
+                    courseFound = courseExists,
+                    
+                });
+            }
             var Quiz = new Quiz
             {
                 Title = dto.Title,
