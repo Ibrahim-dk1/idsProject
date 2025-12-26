@@ -13,7 +13,7 @@
         public int CourseId { get; set; }
         public Course Course { get; set; } = null!;
 
-        public int CreatedBy { get; set; }
+        public string CreatedBy { get; set; } = null!;
         public User User { get; set; } = null!;
 
         public ICollection<LessonCompletion> LessonCompletions { get; set; } = new List<LessonCompletion>();

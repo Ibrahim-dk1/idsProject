@@ -2,6 +2,7 @@
 using Ids.Data;
 using Ids.Models;
 using idsProject.Dtos.Question;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -35,7 +36,7 @@ namespace idsProject.Controllers
 
             return Ok(_mapper.Map<QuestionResponseDto>(question));
         }
-
+        [Authorize(Roles = "Instructor,Admin")]
         [HttpPost]
         public async Task<ActionResult< QuestionResponseDto>> Create(QuestionCreateDto dto)
         {

@@ -9,7 +9,7 @@
         public int QuizId { get; set; }
         public Quiz Quiz { get; set; } = null!;
 
-        public int UserId { get; set; }
+        public string UserId { get; set; } = null!;
         public User User { get; set; } = null!;
 
         public ICollection<StudentAnswer> StudentAnswers { get; set; } = new List<StudentAnswer>();

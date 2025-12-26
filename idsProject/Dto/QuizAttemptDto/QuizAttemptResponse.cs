@@ -6,7 +6,7 @@
         public int Score { get; set; }
         public DateTime AttemptDate { get; set; } = DateTime.Now;
         public int QuizId { get; set; }
-        public int UserId { get; set; }
+        public string UserId { get; set; } = null!;
 
 
     }

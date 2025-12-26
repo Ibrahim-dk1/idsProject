@@ -56,7 +56,7 @@ namespace idsProject.Controllers
             var completion = new LessonCompletion
             {
                 LessonId = dto.LessonId,
-                UserId = dto.UserId
+                
             };
 
             _context.LessonCompletions.Add(completion);

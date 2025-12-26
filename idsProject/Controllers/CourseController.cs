@@ -1,8 +1,9 @@
 ﻿using Ids.Data;
 using Ids.Models;
+using idsProject.Dtos.Course;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using idsProject.Dtos.Course;
 
 namespace idsProject.Controllers
 {
@@ -21,6 +22,7 @@ namespace idsProject.Controllers
         // GET: api/course
         // Get all courses
         // ===============================
+        [AllowAnonymous]
         [HttpGet]
         public async Task<ActionResult<IEnumerable<CourseResponseDto>>> GetAll()
         {
@@ -45,6 +47,7 @@ namespace idsProject.Controllers
         // GET: api/course/{id}
         // Get course by id
         // ===============================
+        [AllowAnonymous]
         [HttpGet("{id}")]
         public async Task<ActionResult<CourseResponseDto>> GetById(int id)
         {
@@ -73,6 +76,7 @@ namespace idsProject.Controllers
         // POST: api/course
         // Add course
         // ===============================
+        [Authorize(Roles = "Instructor,Admin")]
         [HttpPost]
         public async Task<ActionResult> Create(CreateCourseDto dto)
         {
@@ -99,6 +103,7 @@ namespace idsProject.Controllers
         // PUT: api/course/{id}
         // Edit course
         // ===============================
+        [Authorize(Roles = "Instructor,Admin")]
         [HttpPut("{id}")]
         public async Task<ActionResult> Update(int id, UpdateCourseDto dto)
         {
@@ -124,6 +129,7 @@ namespace idsProject.Controllers
         // DELETE: api/course/{id}
         // Remove course
         // ===============================
+        [Authorize(Roles = "Instructor,Admin")]
         [HttpDelete("{id}")]
         public async Task<ActionResult> Delete(int id)
         {
