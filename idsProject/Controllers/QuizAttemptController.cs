@@ -3,6 +3,7 @@ using Ids.Data;
 using Ids.Models;
 using idsProject.Dtos.Quiz;
 using idsProject.Dtos.QuizAttemptDto;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -21,7 +22,7 @@ namespace idsProject.Controllers
             _mapper = mapper;
             _context = context;
         }
-
+        [Authorize(Roles = "Student")]
         [HttpGet]
         public async Task<ActionResult<IEnumerable<QuizAttemptResponse>>> GetAll()
         {
@@ -31,7 +32,7 @@ namespace idsProject.Controllers
 
             return Ok(mappedResults);
         }
-
+        [Authorize(Roles = "Student")]
         [HttpGet("{id}")]
         public async Task<ActionResult<IEnumerable<QuizAttemptResponse>>> GetById(int id)
         {
@@ -40,7 +41,7 @@ namespace idsProject.Controllers
 
             return Ok(mappedResults);
         }
-
+        [Authorize(Roles = "Student")]
         [HttpPost]
         public async Task<ActionResult<QuizAttemptResponse>> Create(QuizAttemptCreate dto)
         {

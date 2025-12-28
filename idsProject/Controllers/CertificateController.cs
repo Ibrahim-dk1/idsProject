@@ -1,6 +1,7 @@
 ﻿using Ids.Data;
-using idsProject.Dtos.Certificate;
 using Ids.Models;
+using idsProject.Dtos.Certificate;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -18,6 +19,7 @@ namespace Ids.Controllers
         }
 
         // GET: api/Certificate
+        [Authorize(Roles = "Student")]
         [HttpGet]
         public async Task<IActionResult> GetAll()
         {
@@ -55,6 +57,7 @@ namespace Ids.Controllers
         }
 
         // POST: api/Certificate
+        [Authorize(Roles = "Student")]
         [HttpPost]
         public async Task<IActionResult> Create(CreateCertificateDto dto)
         {
@@ -81,6 +84,7 @@ namespace Ids.Controllers
         }
 
         // DELETE: api/Certificate/5
+        [Authorize(Roles = "Admin")]
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(int id)
         {

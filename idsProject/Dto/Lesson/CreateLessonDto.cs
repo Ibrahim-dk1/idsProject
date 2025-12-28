@@ -8,6 +8,6 @@
         public int Order { get; set; }
         public int EstimatedDuration { get; set; }
         public int CourseId { get; set; }
-        public int CreatedBy { get; set; }
+         
     }
 }

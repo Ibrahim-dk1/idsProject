@@ -1,8 +1,10 @@
 ﻿using Ids.Data;
 using Ids.Models;
 using idsProject.Dtos.Lesson;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System.Security.Claims;
 
 namespace Ids.Controllers
 {
@@ -18,6 +20,7 @@ namespace Ids.Controllers
         }
 
         // GET: api/Lessons
+        [Authorize]
         [HttpGet]
         public async Task<IActionResult> GetAll()
         {
@@ -36,6 +39,7 @@ namespace Ids.Controllers
         }
 
         // GET: api/Lessons/5
+        [Authorize]
         [HttpGet("{id}")]
         public async Task<IActionResult> GetById(int id)
         {
@@ -46,9 +50,16 @@ namespace Ids.Controllers
         }
 
         // POST: api/Lessons
+        [Authorize(Roles = "Instructor,Admin")]
         [HttpPost]
         public async Task<IActionResult> Create(CreateLessonDto dto)
         {
+
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (userId is null) return Unauthorized();
+
+
+
             var lesson = new Lesson
             {
                 Title = dto.Title,
@@ -57,7 +68,7 @@ namespace Ids.Controllers
                 Order = dto.Order,
                 EstimatedDuration = dto.EstimatedDuration,
                 CourseId = dto.CourseId,
-                CreatedBy = dto.CreatedBy
+                CreatedBy = userId
             };
 
             _context.Lessons.Add(lesson);
@@ -67,6 +78,7 @@ namespace Ids.Controllers
         }
 
         // PUT: api/Lessons/5
+        [Authorize(Roles = "Instructor,Admin")]
         [HttpPut("{id}")]
         public async Task<IActionResult> Update(int id, UpdateLessonDto dto)
         {
@@ -84,6 +96,7 @@ namespace Ids.Controllers
         }
 
         // DELETE: api/Lessons/5
+        [Authorize(Roles = "Instructor,Admin")]
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(int id)
         {

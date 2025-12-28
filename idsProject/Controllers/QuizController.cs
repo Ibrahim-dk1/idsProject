@@ -1,6 +1,7 @@
 ﻿using Ids.Data;
 using Ids.Models;
 using idsProject.Dtos.Quiz;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -18,7 +19,7 @@ namespace idsProject.Controllers
         public QuizController(AppDbContext context) { _context = context; }
 
         [HttpGet]
-
+        [Authorize(Roles = "Instructor,Admin")]
         public async Task<ActionResult<IEnumerable<QuizResponseDto>>> GetAll()
         {
             var quizzes = await _context.Quizzes
@@ -36,6 +37,7 @@ namespace idsProject.Controllers
             return Ok(quizzes);
 
         }
+        [Authorize(Roles = "Instructor,Admin")]
         [HttpGet("{id}")]
         public async Task<ActionResult<QuizResponseDto>> GetById(int id)
         {
@@ -50,7 +52,7 @@ namespace idsProject.Controllers
             }).FirstOrDefaultAsync();
             return Ok(Quiz);
         }
-
+        [Authorize(Roles = "Instructor,Admin")]
         [HttpDelete("{id}")]
         public async Task<ActionResult> Delete(int id)
         {
@@ -61,7 +63,7 @@ namespace idsProject.Controllers
 
             return Ok(Quiz.Id);
         }
-
+        [Authorize(Roles = "Instructor,Admin")]
         [HttpPost]
         public async Task<ActionResult> Create(CreateQuizDto dto)
         {
