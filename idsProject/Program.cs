@@ -2,14 +2,10 @@ using Ids.Data;
 using Ids.Models;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
-using Microsoft.OpenApi;
-using System.Text;
 using Microsoft.OpenApi.Models;
-
+using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -20,58 +16,78 @@ builder.Services.AddControllers();
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
-//  Identity + Identity API endpoints (register/login/etc.)
+// Identity (users/roles)
 builder.Services
     .AddIdentityApiEndpoints<User>()
-    .AddRoles<IdentityRole>() //  needed for RoleManager + roles
+    .AddRoles<IdentityRole>()
     .AddEntityFrameworkStores<AppDbContext>();
 
-//  Authorization (so [Authorize] works)
-
-builder.Services.AddAuthentication(options =>
-{
-    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
-    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
-})
-.AddJwtBearer(options =>
-{
-    var jwt = builder.Configuration.GetSection("Jwt");
-    options.TokenValidationParameters = new TokenValidationParameters
+// JWT Auth
+builder.Services
+    .AddAuthentication(options =>
     {
-        ValidateIssuer = true,
-        ValidateAudience = true,
-        ValidateLifetime = true,
-        ValidateIssuerSigningKey = true,
-
-        ValidIssuer = jwt["Issuer"],
-        ValidAudience = jwt["Audience"],
-        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwt["Key"]!)),
-        ClockSkew = TimeSpan.Zero
-    };
-    options.Events = new JwtBearerEvents
+        options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+        options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+    })
+    .AddJwtBearer(options =>
     {
-        OnMessageReceived = context =>
+        var jwt = builder.Configuration.GetSection("Jwt");
+
+        options.TokenValidationParameters = new TokenValidationParameters
         {
-            // Default: read from Authorization header.
-            // Optional: if you ever store access token in cookie, read it here.
-            // Example cookie name: "accessToken"
-            var tokenFromCookie = context.Request.Cookies["accessToken"];
-            if (!string.IsNullOrWhiteSpace(tokenFromCookie))
-            {
-                context.Token = tokenFromCookie;
-            }
-            return Task.CompletedTask;
-        }
-    };
-});
+            ValidateIssuer = true,
+            ValidateAudience = true,
+            ValidateLifetime = true,
+            ValidateIssuerSigningKey = true,
 
+            ValidIssuer = jwt["Issuer"],
+            ValidAudience = jwt["Audience"],
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwt["Key"]!)),
+            ClockSkew = TimeSpan.Zero
+        };
+
+        //  Read JWT from cookie (accessToken) if present
+        options.Events = new JwtBearerEvents
+        {
+            OnMessageReceived = context =>
+            {
+                var tokenFromCookie = context.Request.Cookies["accessToken"];
+                if (!string.IsNullOrWhiteSpace(tokenFromCookie))
+                {
+                    context.Token = tokenFromCookie;
+                }
+                return Task.CompletedTask;
+            }
+        };
+    });
 
 builder.Services.AddAuthorization();
 
+// CORS (Frontend -> Backend)
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("Frontend", policy =>
+    {
+        policy
+            .WithOrigins(
+                "http://localhost:5173",
+                "https://localhost:5173",
+                "http://localhost:3000",
+                "https://localhost:3000"
+            )
+            .AllowAnyHeader()
+            .AllowAnyMethod()
+            .AllowCredentials();
+    });
+});
 
-// Swagger
+// Helps browsers accept cross-site cookies in dev (still must be SET by your login)
+builder.Services.Configure<CookiePolicyOptions>(options =>
+{
+    options.MinimumSameSitePolicy = SameSiteMode.Unspecified;
+});
+
 builder.Services.AddEndpointsApiExplorer();
-
 builder.Services.AddSwaggerGen(c =>
 {
     c.SwaggerDoc("v1", new OpenApiInfo { Title = "idsProject", Version = "v1" });
@@ -102,43 +118,20 @@ builder.Services.AddSwaggerGen(c =>
     });
 });
 
-// AutoMapper (keep your assembly)
-builder.Services.AddAutoMapper(cfg => { }, typeof(QuizAttemptProfile).Assembly);
-
-
-builder.Services.AddCors(options =>
-{
-    options.AddPolicy("Frontend", policy =>
-    {
-        policy
-            .WithOrigins(
-                "http://localhost:5173",
-                "http://localhost:3000"
-            )
-            .AllowAnyHeader()
-            .AllowAnyMethod()
-            .AllowCredentials();
-    });
-});
-
-
 var app = builder.Build();
 
-
+// Seed Roles + Admin
 var roleNames = new[] { "Admin", "Instructor", "Student" };
 
 using (var scope = app.Services.CreateScope())
 {
     var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
-
     foreach (var roleName in roleNames)
     {
-        var exists = await roleManager.RoleExistsAsync(roleName);
-        if (!exists)
-        {
+        if (!await roleManager.RoleExistsAsync(roleName))
             await roleManager.CreateAsync(new IdentityRole(roleName));
-        }
     }
+
     var userManager = scope.ServiceProvider.GetRequiredService<UserManager<User>>();
 
     var adminEmail = "admin@local.test";
@@ -173,11 +166,7 @@ using (var scope = app.Services.CreateScope())
             throw new Exception($"Assign Admin role failed: {errors}");
         }
     }
-
 }
-
-
-
 
 if (app.Environment.IsDevelopment())
 {
@@ -187,24 +176,24 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
+app.UseCookiePolicy();        //  good to keep
+app.UseCors("Frontend");      //  must be before auth
 
-
-app.UseCors("Frontend");
-
-//  IMPORTANT ORDER
 app.UseAuthentication();
 app.UseAuthorization();
 
-
+//  If you want the built-in Identity endpoints (/register, /login, ...)
+app.MapIdentityApi<User>();
 
 app.MapControllers();
 
-// database connection test
+// debug endpoints
 app.MapGet("/db-check", async (AppDbContext context) =>
 {
     var canConnect = await context.Database.CanConnectAsync();
     return Results.Ok(new { canConnect });
 });
+
 app.MapGet("/db-info", (AppDbContext context) =>
 {
     var conn = context.Database.GetDbConnection();
@@ -214,22 +203,5 @@ app.MapGet("/db-info", (AppDbContext context) =>
         database = conn.Database
     });
 });
-
-
-
-
-//using (var scope = app.Services.CreateScope())
-//{
-//    var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-//    await db.Database.MigrateAsync(); // create/update schema
-
-//    var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
-//    var roles = new[] { "Admin", "Instructor", "Student" };
-//    foreach (var role in roles)
-//    {
-//        if (!await roleManager.RoleExistsAsync(role))
-//            await roleManager.CreateAsync(new IdentityRole(role));
-//    }
-//}
 
 app.Run();

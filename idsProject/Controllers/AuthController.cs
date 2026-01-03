@@ -13,7 +13,6 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
 
-
 namespace idsProject.Controllers
 {
     [ApiController]
@@ -38,16 +37,37 @@ namespace idsProject.Controllers
         }
 
         // =========================
-        // Refresh cookie helpers
+        // Cookie helpers
         // =========================
+
+        // ✅ ACCESS TOKEN cookie (JWT)
+        private void SetAccessTokenCookie(string accessToken, DateTime expiresAtUtc)
+        {
+            Response.Cookies.Append("accessToken", accessToken, new CookieOptions
+            {
+                HttpOnly = true,
+                Secure = true,                // because API is https://localhost
+                SameSite = SameSiteMode.None, // because frontend is different origin
+                Expires = expiresAtUtc
+            });
+        }
+
+        private void ClearAccessTokenCookie()
+        {
+            Response.Cookies.Delete("accessToken", new CookieOptions
+            {
+                Secure = true,
+                SameSite = SameSiteMode.None
+            });
+        }
+
+        // ✅ REFRESH TOKEN cookie (plain token)
         private void SetRefreshTokenCookie(string refreshTokenPlain, DateTime expiresAtUtc)
         {
-            // Cross-site cookie (React 5173 -> API https://localhost:7126)
-            // SameSite=None requires Secure=true (HTTPS).
             Response.Cookies.Append("refreshToken", refreshTokenPlain, new CookieOptions
             {
                 HttpOnly = true,
-                Secure = true,
+                Secure = true,                // SameSite=None requires Secure=true
                 SameSite = SameSiteMode.None,
                 Expires = expiresAtUtc
             });
@@ -55,9 +75,16 @@ namespace idsProject.Controllers
 
         private void ClearRefreshTokenCookie()
         {
-            Response.Cookies.Delete("refreshToken");
+            Response.Cookies.Delete("refreshToken", new CookieOptions
+            {
+                Secure = true,
+                SameSite = SameSiteMode.None
+            });
         }
 
+        // =========================
+        // Register
+        // =========================
         [AllowAnonymous]
         [HttpPost("register")]
         public async Task<ActionResult> Register(RegisterUserDto dto)
@@ -81,6 +108,9 @@ namespace idsProject.Controllers
             return Ok(new { message = "Registered successfully" });
         }
 
+        // =========================
+        // Login
+        // =========================
         [AllowAnonymous]
         [HttpPost("login")]
         public async Task<ActionResult<AuthResponseDto>> Login(LoginUserDto dto)
@@ -128,6 +158,9 @@ namespace idsProject.Controllers
 
             var accessToken = new JwtSecurityTokenHandler().WriteToken(token);
 
+            // ✅ IMPORTANT: set access token cookie so /api/User won't be 401
+            SetAccessTokenCookie(accessToken, expires);
+
             // ===== REFRESH TOKEN (HASHED IN DB, PLAIN IN COOKIE) =====
             var refreshDays = int.Parse(jwt["RefreshTokenDays"] ?? "14");
             var pepper = jwt["RefreshTokenPepper"]!;
@@ -151,16 +184,19 @@ namespace idsProject.Controllers
 
             await _context.SaveChangesAsync();
 
-            // 4) cookie keeps the plain token (HttpOnly so JS can’t read it)
+            // 4) cookie keeps the plain refresh token (HttpOnly so JS can’t read it)
             SetRefreshTokenCookie(refreshTokenPlain, refreshExpires);
 
             return Ok(new AuthResponseDto
             {
-                AccessToken = accessToken,
+                AccessToken = accessToken, // optional for debugging; cookie is what frontend uses
                 ExpiresAt = expires
             });
         }
 
+        // =========================
+        // Refresh
+        // =========================
         [AllowAnonymous]
         [HttpPost("refresh")]
         public async Task<ActionResult<AuthResponseDto>> Refresh()
@@ -193,7 +229,7 @@ namespace idsProject.Controllers
             if (user == null)
                 return Unauthorized("User not found.");
 
-            // 5) issue new access token (same as login)
+            // 5) issue new access token
             var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwt["Key"]!));
             var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
             var expires = DateTime.UtcNow.AddMinutes(double.Parse(jwt["ExpiresMinutes"]!));
@@ -218,6 +254,9 @@ namespace idsProject.Controllers
             );
 
             var accessToken = new JwtSecurityTokenHandler().WriteToken(token);
+
+            // ✅ set new access token cookie
+            SetAccessTokenCookie(accessToken, expires);
 
             // 6) rotate refresh token
             stored.IsRevoked = true;
@@ -245,18 +284,22 @@ namespace idsProject.Controllers
 
             return Ok(new AuthResponseDto
             {
-                AccessToken = accessToken,
+                AccessToken = accessToken, // optional
                 ExpiresAt = expires
             });
         }
 
+        // =========================
+        // Logout
+        // =========================
         [Authorize]
         [HttpPost("logout")]
         public async Task<IActionResult> Logout()
         {
             var refreshTokenPlain = Request.Cookies["refreshToken"];
 
-            // always clear cookie
+            // ✅ always clear cookies
+            ClearAccessTokenCookie();
             ClearRefreshTokenCookie();
 
             if (string.IsNullOrWhiteSpace(refreshTokenPlain))
