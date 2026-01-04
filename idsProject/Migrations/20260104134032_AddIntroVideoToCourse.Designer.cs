@@ -12,8 +12,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace idsProject.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20251226014146_HashRefreshTokens")]
-    partial class HashRefreshTokens
+    [Migration("20260104134032_AddIntroVideoToCourse")]
+    partial class AddIntroVideoToCourse
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -112,6 +112,9 @@ namespace idsProject.Migrations
 
                     b.Property<string>("FullDescription")
                         .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("IntroVideoUrl")
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<bool>("IsPublished")
@@ -551,7 +554,7 @@ namespace idsProject.Migrations
                     b.Property<bool>("IsRevoked")
                         .HasColumnType("bit");
 
-                    b.Property<string>("ReplacedByToken")
+                    b.Property<string>("ReplacedByTokenHash")
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("TokenHash")

@@ -6,9 +6,11 @@
         public string ShortDescription { get; set; } = null!;
         public string FullDescription { get; set; } = null!;
         public string Difficulty { get; set; } = null!;
-        public string? CourseThumbnail { get; set; }
+        public string? CourseThumbnail { get; set; } // Link from frontend
         public int CourseDuration { get; set; }
         public bool IsPublished { get; set; }
-        public string CreatedBy { get; set; }= null!;
+
+        // This handles the actual video file upload
+        public IFormFile? IntroVideo { get; set; }
     }
 }

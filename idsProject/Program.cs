@@ -9,20 +9,33 @@ using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// ========================
+// ?? FORCE wwwroot REGISTRATION (FIX)
+// ========================
+builder.WebHost.UseWebRoot("wwwroot");
+
+// ========================
 // Controllers
+// ========================
 builder.Services.AddControllers();
 
+// ========================
 // DbContext
+// ========================
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
+// ========================
 // Identity (users/roles)
+// ========================
 builder.Services
     .AddIdentityApiEndpoints<User>()
     .AddRoles<IdentityRole>()
     .AddEntityFrameworkStores<AppDbContext>();
 
+// ========================
 // JWT Auth
+// ========================
 builder.Services
     .AddAuthentication(options =>
     {
@@ -42,11 +55,12 @@ builder.Services
 
             ValidIssuer = jwt["Issuer"],
             ValidAudience = jwt["Audience"],
-            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwt["Key"]!)),
+            IssuerSigningKey = new SymmetricSecurityKey(
+                Encoding.UTF8.GetBytes(jwt["Key"]!)
+            ),
             ClockSkew = TimeSpan.Zero
         };
 
-        //  Read JWT from cookie (accessToken) if present
         options.Events = new JwtBearerEvents
         {
             OnMessageReceived = context =>
@@ -63,7 +77,9 @@ builder.Services
 
 builder.Services.AddAuthorization();
 
+// ========================
 // CORS (Frontend -> Backend)
+// ========================
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("Frontend", policy =>
@@ -81,12 +97,15 @@ builder.Services.AddCors(options =>
     });
 });
 
-// Helps browsers accept cross-site cookies in dev (still must be SET by your login)
+// Helps browsers accept cross-site cookies in dev
 builder.Services.Configure<CookiePolicyOptions>(options =>
 {
     options.MinimumSameSitePolicy = SameSiteMode.Unspecified;
 });
 
+// ========================
+// Swagger
+// ========================
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
 {
@@ -118,9 +137,25 @@ builder.Services.AddSwaggerGen(c =>
     });
 });
 
+// ========================
+// Kestrel HTTPS configuration
+// ========================
+builder.WebHost.ConfigureKestrel(options =>
+{
+    options.ListenLocalhost(5251, listenOptions =>
+    {
+        listenOptions.UseHttps();
+    });
+});
+
+// ========================
+// Build the app
+// ========================
 var app = builder.Build();
 
+// ========================
 // Seed Roles + Admin
+// ========================
 var roleNames = new[] { "Admin", "Instructor", "Student" };
 
 using (var scope = app.Services.CreateScope())
@@ -135,7 +170,7 @@ using (var scope = app.Services.CreateScope())
     var userManager = scope.ServiceProvider.GetRequiredService<UserManager<User>>();
 
     var adminEmail = "admin@local.test";
-    var adminPassword = "Admin123!@#"; // dev only
+    var adminPassword = "Admin123!@#";
 
     var adminUser = await userManager.FindByEmailAsync(adminEmail);
     if (adminUser == null)
@@ -168,6 +203,9 @@ using (var scope = app.Services.CreateScope())
     }
 }
 
+// ========================
+// Middleware
+// ========================
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
@@ -176,18 +214,26 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
-app.UseCookiePolicy();        //  good to keep
-app.UseCors("Frontend");      //  must be before auth
+app.UseCookiePolicy();
+app.UseCors("Frontend");
 
 app.UseAuthentication();
 app.UseAuthorization();
 
-//  If you want the built-in Identity endpoints (/register, /login, ...)
+// ========================
+// Identity API endpoints
+// ========================
 app.MapIdentityApi<User>();
 
+// ========================
+// Controllers + Static files
+// ========================
+app.UseStaticFiles();
 app.MapControllers();
 
-// debug endpoints
+// ========================
+// Debug endpoints
+// ========================
 app.MapGet("/db-check", async (AppDbContext context) =>
 {
     var canConnect = await context.Database.CanConnectAsync();

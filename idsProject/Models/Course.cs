@@ -1,4 +1,6 @@
-﻿namespace Ids.Models
+﻿using idsProject.Models;
+
+namespace Ids.Models
 {
     public class Course
     {
@@ -14,9 +16,14 @@
 
         public string CreatedBy { get; set; } = null!;
         public User Creator { get; set; } = null!;
-
+        public string? IntroVideoUrl { get; set; }
         public ICollection<Lesson> Lessons { get; set; } = new List<Lesson>();
         public ICollection<Quiz> Quizzes { get; set; } = new List<Quiz>();
         public ICollection<Certificate> Certificates { get; set; } = new List<Certificate>();
+        public ICollection<CourseRating> Ratings { get; set; }
+    = new List<CourseRating>();
+
+        
+
     }
 }
